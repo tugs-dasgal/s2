@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Математикийн Сорил - Олон гишүүнт ба Зэргийн чанар</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script>
+        // Таны Public Key
+        (function() { emailjs.init("YprKOWjuKoWJYmpsn"); })(); 
+        
+        window.MathJax = {
+            tex: { 
+                inlineMath: [['\\(', '\\)'], ['$' , '$']], 
+                displayMath: [['\\[', '\\]'], ['$$' , '$$']],
+            },
+            options: { enableMenu: false }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; }
+        .glass-card { background: #ffffff; border-radius: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
+        .option-item { border: 1.5px solid #e2e8f0; cursor: pointer; transition: all 0.2s ease; border-radius: 1rem; padding: 1rem; font-weight: 500; }
+        .option-item:hover:not(.disabled) { border-color: #6366f1; background-color: #f8faff; }
+        .correct { border-color: #10b981 !important; background-color: #f0fdf4 !important; color: #166534; }
+        .wrong { border-color: #f43f5e !important; background-color: #fef2f2 !important; color: #991b1b; }
+        .disabled { cursor: default; pointer-events: none; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="app" class="w-full max-w-lg">
+        <!-- Нэвтрэх хэсэг -->
+        <div id="auth-screen" class="glass-card p-10 text-center">
+            <h1 class="text-2xl font-bold mb-2">Математикийн Сорил</h1>
+            <p class="text-slate-400 mb-8 text-sm italic">Бүлэг: Олон гишүүнт ба Зэргийн чанар</p>
+            <div class="space-y-4 text-left">
+                <input type="text" id="input-class" placeholder="Анги (Жишээ: 11а)" class="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:border-indigo-500">
+                <input type="text" id="input-name" placeholder="Сурагчийн нэр" class="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:border-indigo-500">
+                <button onclick="startQuiz()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700 shadow-lg">СОРИЛЫГ ЭХЛҮҮЛЭХ</button>
+            </div>
+        </div>
+
+        <!-- Асуултын хэсэг -->
+        <div id="quiz-screen" class="hidden space-y-4">
+            <div class="flex justify-between items-center px-4">
+                <span id="info-display" class="text-sm font-semibold text-slate-500"></span>
+                <span id="timer-display" class="text-sm font-bold text-rose-500 bg-rose-50 px-3 py-1 rounded-full">20:00</span>
+            </div>
+            <div class="glass-card p-8 min-h-[450px] flex flex-col">
+                <div id="q-progress" class="text-[10px] font-bold text-indigo-500 mb-2 uppercase tracking-widest"></div>
+                <div id="q-text" class="text-lg font-semibold text-slate-800 mb-6 leading-relaxed"></div>
+                <div id="options" class="grid gap-3"></div>
+                <div id="feedback" class="mt-6 hidden border-t pt-4">
+                    <div class="p-3 bg-indigo-50 rounded-xl mb-4 text-xs text-slate-600" id="expl-text"></div>
+                    <button onclick="nextQuestion()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold uppercase">Үргэлжлүүлэх</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Үр дүнгийн хэсэг -->
+        <div id="result-screen" class="hidden glass-card p-10 text-center">
+            <h2 class="text-2xl font-bold mb-6">Сорилын дүн</h2>
+            <div class="text-5xl font-black text-indigo-600 mb-2" id="res-percent">0%</div>
+            <div id="result-meta" class="text-slate-500 mb-8 text-sm"></div>
+            
+            <div id="action-section" class="space-y-3">
+                <p class="text-xs text-rose-500 font-medium mb-2 italic">* Үр дүнгээ багш руу илгээсний дараа тайлбар харах боломжтой болно.</p>
+                <button onclick="sendFinalEmail()" id="send-btn" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-md">БАГШ РУУ ИЛГЭЭХ</button>
+            </div>
+
+            <div id="email-status" class="hidden py-4 px-4 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold mb-4 animate-pulse">
+                АМЖИЛТТАЙ ИЛГЭЭГДЛЭЭ! ✅
+            </div>
+
+            <!-- Зөвхөн илгээсний дараа гарч ирэх хэсэг -->
+            <div id="post-submission-review" class="hidden mt-8 text-left border-t pt-6">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span class="w-2 h-2 bg-indigo-500 rounded-full"></span> 
+                    Гүйцэтгэлийн дэлгэрэнгүй
+                </h3>
+                <div id="review-list" class="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar"></div>
+                
+                <button onclick="location.reload()" class="w-full py-4 mt-6 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors">
+                    ДАХИН ЭХЛЭХ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const QUESTIONS = [
+            { q: "\\( a^m \\cdot a^n \\) илэрхийллийг хялбарчил.", a: ["\\( a^{m+n} \\)", "\\( a^{m-n} \\)", "\\( a^{m \\cdot n} \\)", "\\( a^m + a^n \\)"], c: 0, e: "Ижил суурьтай зэргүүдийг үржүүлэхэд зэрэг дэвшүүлэгчүүдийг нэмнэ." },
+            { q: "\\( (a^m)^n \\) илэрхийлэл юутай тэнцүү вэ?", a: ["\\( a^{m+n} \\)", "\\( a^{m \\cdot n} \\)", "\\( a^{m^n} \\)", "\\( n \\cdot a^m \\)"], c: 1, e: "Зэргийг зэрэгт дэвшүүлэхэд зэрэг дэвшүүлэгчүүдийг үржүүлнэ." },
+            { q: "\\( 2^3 \\cdot 2^2 \\) утгыг ол.", a: ["64", "32", "12", "16"], c: 1, e: "\\( 2^5 = 32 \\)" },
+            { q: "\\( (x+y)^2 \\) олон гишүүнтийг задал.", a: ["\\( x^2 + y^2 \\)", "\\( x^2 + xy + y^2 \\)", "\\( x^2 + 2xy + y^2 \\)", "\\( 2x + 2y \\)"], c: 2, e: "Нийлбэрийн квадрат: \\( (a+b)^2 = a^2 + 2ab + b^2 \\)" },
+            { q: "\\( x^2 - y^2 \\) юутай тэнцүү вэ?", a: ["\\( (x-y)^2 \\)", "\\( (x-y)(x+y) \\)", "\\( x^2 - 2xy + y^2 \\)", "\\( (x+y)(x+y) \\)"], c: 1, e: "Квадратуудын ялгавар: \\( a^2 - b^2 = (a-b)(a+b) \\)" },
+            { q: "\\( 5^0 \\) утга хэд вэ?", a: ["0", "5", "1", "Тодорхойгүй"], c: 2, e: "Тэгээс ялгаатай дурын тооны тэг зэрэг 1-тэй тэнцүү байна." },
+            { q: "\\( (2x^2)^3 \\) илэрхийллийг хялбарчил.", a: ["\\( 6x^6 \\)", "\\( 8x^5 \\)", "\\( 8x^6 \\)", "\\( 2x^6 \\)"], c: 2, e: "\\( 2^3 \\cdot (x^2)^3 = 8x^6 \\)" },
+            { q: "\\( (a-b)^2 \\) задаргааг ол.", a: ["\\( a^2 - b^2 \\)", "\\( a^2 - 2ab + b^2 \\)", "\\( a^2 + 2ab + b^2 \\)", "\\( a^2 - ab + b^2 \\)"], c: 1, e: "Ялгаврын квадрат: \\( (a-b)^2 = a^2 - 2ab + b^2 \\)" },
+            { q: "\\( a^m : a^n \\) илэрхийлэл юутай тэнцүү вэ?", a: ["\\( a^{m/n} \\)", "\\( a^{m-n} \\)", "\\( a^{n-m} \\)", "\\( a^{m+n} \\)"], c: 1, e: "Ижил суурьтай зэргүүдийг хуваахад зэрэг дэвшүүлэгчүүдийг хасна." },
+            { q: "\\( 3^{-2} \\) утгыг ол.", a: ["-9", "9", "1/6", "1/9"], c: 3, e: "Сөрөг зэрэг нь урвуу тоог заана: \\( a^{-n} = 1/a^n \\). \\( 3^{-2} = 1/3^2 = 1/9 \\)" },
+            { q: "\\( x^2 + 5x + 6 \\) олон гишүүнтийг үржигдэхүүн болгон задал.", a: ["\\( (x+1)(x+6) \\)", "\\( (x+2)(x+3) \\)", "\\( (x-2)(x-3) \\)", "\\( (x+5)(x+1) \\)"], c: 1, e: "Үржвэр нь 6, нийлбэр нь 5 байх тоонууд нь 2 ба 3 юм." },
+            { q: "\\( 10^3 \\cdot 10^{-1} \\) хэд вэ?", a: ["100", "1000", "10", "10000"], c: 0, e: "\\( 10^{3-1} = 10^2 = 100 \\)" },
+            { q: "\\( (x+2)(x-2) \\) үржвэрийг ол.", a: ["\\( x^2 + 4 \\)", "\\( x^2 - 4 \\)", "\\( x^2 - 2x + 4 \\)", "\\( x^2 - 4x + 4 \\)"], c: 1, e: "Квадратуудын ялгаврын томьёо ашиглана." },
+            { q: "\\( (x+3)^2 - 9 \\) илэрхийллийг хялбарчил.", a: ["\\( x^2 \\)", "\\( x^2 + 6x \\)", "\\( x^2 + 6x + 18 \\)", "\\( x^2 + 9 \\)"], c: 1, e: "\\( x^2 + 6x + 9 - 9 = x^2 + 6x \\)" },
+            { q: "\\( 2^x = 16 \\) бол x-ийг ол.", a: ["2", "3", "4", "8"], c: 2, e: "\\( 2^4 = 16 \\) тул x=4." },
+            { q: "\\( (ab)^n \\) юутай тэнцүү вэ?", a: ["\\( a^n b \\)", "\\( ab^n \\)", "\\( a^n b^n \\)", "\\( n(ab) \\)"], c: 2, e: "Үржвэрийн зэрэг нь үржигдэхүүн бүрийн зэргийн үржвэртэй тэнцүү." },
+            { q: "\\( x^2 - 4x + 4 \\) илэрхийллийг бүтэн квадрат болго.", a: ["\\( (x+2)^2 \\)", "\\( (x-2)^2 \\)", "\\( (x-4)^2 \\)", "\\( x(x-4) \\)"], c: 1, e: "\\( (x-2)^2 = x^2 - 2 \\cdot x \\cdot 2 + 2^2 \\)" },
+            { q: "\\( (2^3)^2 \\) утга хэд вэ?", a: ["32", "64", "12", "128"], c: 1, e: "\\( 2^{3 \\cdot 2} = 2^6 = 64 \\)" },
+            { q: "\\( x^3 + y^3 \\) задаргааг ол.", a: ["\\( (x+y)(x^2 - xy + y^2) \\)", "\\( (x+y)(x^2 + xy + y^2) \\)", "\\( (x-y)(x^2 + xy + y^2) \\)", "\\( (x+y)^3 \\)"], c: 0, e: "Кубуудын нийлбэрийн томьёо." },
+            { q: "\\( (1/2)^{-3} \\) утгыг ол.", a: ["1/8", "-8", "8", "1/6"], c: 2, e: "\\( (2/1)^3 = 8 \\)" }
+        ];
+
+        let quiz, currentIdx, score, userChoices, userName, userClass, timer;
+        let timeRemaining = 20 * 60;
+
+        function startQuiz() {
+            userName = document.getElementById('input-name').value.trim();
+            userClass = document.getElementById('input-class').value.trim();
+            if(!userName || !userClass) return alert("Анги болон нэрээ оруулна уу.");
+
+            quiz = [...QUESTIONS].sort(() => Math.random() - 0.5);
+            currentIdx = 0; score = 0; userChoices = [];
+            
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            document.getElementById('info-display').innerText = `${userClass} | ${userName}`;
+            
+            loadQuestion();
+            runTimer();
+        }
+
+        function runTimer() {
+            timer = setInterval(() => {
+                timeRemaining--;
+                let m = Math.floor(timeRemaining / 60);
+                let s = timeRemaining % 60;
+                document.getElementById('timer-display').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                if(timeRemaining <= 0) endQuiz();
+            }, 1000);
+        }
+
+        function loadQuestion() {
+            const data = quiz[currentIdx];
+            document.getElementById('feedback').classList.add('hidden');
+            document.getElementById('q-progress').innerText = `Асуулт ${currentIdx + 1} / ${quiz.length}`;
+            document.getElementById('q-text').innerHTML = data.q;
+            
+            const optBox = document.getElementById('options');
+            optBox.innerHTML = '';
+            data.a.forEach((txt, i) => {
+                const d = document.createElement('div');
+                d.className = "option-item";
+                d.innerHTML = txt;
+                d.onclick = () => selectOption(i, d);
+                optBox.appendChild(d);
+            });
+            if(window.MathJax) MathJax.typesetPromise();
+        }
+
+        function selectOption(idx, el) {
+            const data = quiz[currentIdx];
+            const isCorrect = idx === data.c;
+            userChoices.push({ 
+                id: currentIdx + 1,
+                q: data.q, 
+                correct: isCorrect, 
+                user: data.a[idx], 
+                correctAns: data.a[data.c], 
+                expl: data.e 
+            });
+            
+            document.querySelectorAll('.option-item').forEach(b => b.classList.add('disabled'));
+            if(isCorrect) { el.classList.add('correct'); score++; }
+            else { el.classList.add('wrong'); document.querySelectorAll('.option-item')[data.c].classList.add('correct'); }
+            
+            document.getElementById('expl-text').innerHTML = isCorrect ? `<span class="text-emerald-600 font-bold">ЗӨВ ХАРИУЛЛАА!</span>` : `<span class="text-rose-600 font-bold">ХАРИУЛТ БҮРТГЭГДЛЭЭ.</span>`;
+            document.getElementById('feedback').classList.remove('hidden');
+            if(window.MathJax) MathJax.typesetPromise();
+        }
+
+        function nextQuestion() {
+            currentIdx++;
+            if(currentIdx < quiz.length) loadQuestion(); else endQuiz();
+        }
+
+        function endQuiz() {
+            clearInterval(timer);
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+            const p = Math.round((score/quiz.length)*100);
+            document.getElementById('res-percent').innerText = p + "%";
+            document.getElementById('result-meta').innerText = `${userName} (${userClass}), та ${quiz.length} асуултаас ${score}-ыг зөв хариуллаа.`;
+        }
+
+        async function sendFinalEmail() {
+            const btn = document.getElementById('send-btn');
+            const SERVICE_ID = "service_qxln57f"; 
+            const TEMPLATE_ID = "template_mergd09"; 
+
+            btn.disabled = true;
+            btn.innerText = "ИЛГЭЭЖ БАЙНА...";
+
+            const wrongQuestions = userChoices
+                .filter(item => !item.correct)
+                .map(item => item.id)
+                .join(', ');
+
+            const percentage = Math.round((score/quiz.length)*100);
+            const resultSummary = `Нийт оноо: ${score}/${quiz.length} (${percentage}%) \nАлдсан даалгаврын дугаарууд: ${wrongQuestions || 'Бүгд зөв'}`;
+
+            const templateParams = {
+                from_name: userName,
+                name: userName,
+                student_class: userClass,
+                message: resultSummary
+            };
+
+            try {
+                await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams);
+                
+                document.getElementById('action-section').style.display = 'none';
+                document.getElementById('email-status').classList.remove('hidden');
+                
+                showReviewAfterSubmission();
+                
+            } catch (err) {
+                console.error("EmailJS Error:", err);
+                alert("Илгээхэд алдаа гарлаа. Та дахин оролдоно уу.");
+                btn.disabled = false;
+                btn.innerText = "ДАХИН ИЛГЭЭХ";
+            }
+        }
+
+        function showReviewAfterSubmission() {
+            const reviewContainer = document.getElementById('post-submission-review');
+            const list = document.getElementById('review-list');
+            
+            reviewContainer.classList.remove('hidden');
+            list.innerHTML = userChoices.map((item, i) => `
+                <div class="p-4 rounded-xl border ${item.correct ? 'border-emerald-100 bg-emerald-50' : 'border-rose-100 bg-rose-50'} shadow-sm">
+                    <div class="font-bold text-sm mb-2 text-slate-700">${i+1}. ${item.q}</div>
+                    <div class="flex items-center gap-2 text-xs mb-2">
+                        <span class="px-2 py-0.5 rounded-full ${item.correct ? 'bg-emerald-200 text-emerald-800' : 'bg-rose-200 text-rose-800'} font-bold">
+                            ${item.correct ? 'ЗӨВ' : 'БУРУУ'}
+                        </span>
+                        ${!item.correct ? `<span class="text-slate-500">Зөв хариулт: <span class="text-emerald-600 font-bold">${item.correctAns}</span></span>` : ''}
+                    </div>
+                    <div class="text-[11px] text-slate-600 bg-white/50 p-2 rounded-lg border border-slate-100 italic">
+                        <b>Тайлбар:</b> ${item.expl}
+                    </div>
+                </div>
+            `).join('');
+            
+            if(window.MathJax) MathJax.typesetPromise();
+            
+            reviewContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</body>
+</html>
